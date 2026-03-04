@@ -1,6 +1,6 @@
 # SLURM Submit Tracking (`sbatch_track.sh`)
 
-`tools/slurm/sbatch_track.sh` is a thin wrapper around `sbatch`.
+`sbatch_track.sh` is a thin wrapper around `sbatch`.
 It submits your job normally, then appends one TSV row with submission metadata.
 
 ## What It Logs
@@ -8,24 +8,21 @@ Columns in the history TSV:
 
 `timestamp`, `user`, `host`, `cwd`, `git_sha`, `job_id`, `status`, `script`, `array`, `time`, `mem`, `partition`, `command`
 
-## Default History Location
-By default, history is written to:
-
-`<repo_root>/scripts/slurm_history`
-
 ## Basic Usage
 Use it exactly where you would normally use `sbatch`:
 
 ```bash
-tools/slurm/sbatch_track.sh --array=0-31%8 scripts/03c_run_rslds.sh
+tools/slurm/sbatch_track.sh --array=0-31%8 scripts/your_slurm_script.sh
 ```
 
+The folder `scripts` is situational. I like to keep  my scripts in a folder called `scripts` per project. You could choose other names.
+
 ## Override History Path
-Set `SLURM_HISTORY_FILE` when calling the wrapper:
+Set `SLURM_HISTORY_FILE` when calling the wrapper (only if you want all your slurm history in one place, rather than project/repo specific):
 
 ```bash
-SLURM_HISTORY_FILE=/path/to/project/logs/slurm_history.tsv \
-  tools/slurm/sbatch_track.sh --array=0-31%8 scripts/03c_run_rslds.sh
+SLURM_HISTORY_FILE=/path/to/logs/slurm_history.tsv \
+  sbatch_track.sh --array=0-31%8 scripts/your_slurm_script.sh
 ```
 
 ## Make It Your Default `sbatch`
@@ -37,7 +34,7 @@ sbatch() {
   repo_root="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
   mkdir -p "$repo_root/logs"
   SLURM_HISTORY_FILE="$repo_root/logs/slurm_history.tsv" \
-    /orcd/home/002/yibei/research-toolkit/tools/slurm/sbatch_track.sh "$@"
+    the_absolute_path_to/sbatch_track.sh "$@"
 }
 ```
 
@@ -50,13 +47,24 @@ source ~/.bashrc
 After this, normal submits still work:
 
 ```bash
-sbatch scripts/03b_pca4rslds.sh
-sbatch --array=0-31%8 scripts/03b_pca4rslds.sh
+cd your_project_folder
+sbatch scripts/your_slurm_script.sh
+sbatch --array=0-31 scripts/your_slurm_script.sh
 ```
 
-Each repo gets its own file at:
+Each repo/project gets its own file at:
 
 `<repo_root>/logs/slurm_history.tsv`
+
+which will look like
+# Job Submission Log
+
+| timestamp | user | host | cwd | git_sha | job_id | status | script | array | time | mem | partition | command |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 2026-03-04T15:31:40-05:00 | yourname | nodeXXXX | your_project_folder | 7a32260 | 10038147 | ok | scripts/your_slurm_script.sh | NA | NA | NA | NA | sbatch scripts/your_slurm_script.shh |
+| 2026-03-04T15:31:44-05:00 | yourname | nodeXXXX | your_project_folder | 7a32260 | 10038152 | ok | scripts/your_slurm_script.sh | 0-31 | NA | NA | NA | sbatch --array=0-31 scripts/your_slurm_script.sh |
+
+`nodeXXXX` will be HPC specific.
 
 ## Behavior Notes
 - Exit code is forwarded from `sbatch`.
